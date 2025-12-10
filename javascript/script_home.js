@@ -20,6 +20,8 @@ window.onload =  async function() {
         const response = await fetch(`${SHEETDB_API.NOTAS}/search?GrupoID=${grupoLogado.GrupoID}`);
         const notasDoGrupo = await response.json(); // A resposta é a lista de notas
         allGroupNotes = notasDoGrupo;
+
+        document.getElementById("main").innerHTML = "";
         
         // Mostra cada nota encontrada na tela
         if (allGroupNotes.length > 0) {
@@ -28,6 +30,7 @@ window.onload =  async function() {
             });
         }
 
+        verificarSeTemNotas();
         updateFiltroUsuarios();
 
         nome_usuario.textContent = `${usuarioLogado.Nome} - Painel`;
@@ -89,6 +92,12 @@ document.getElementById("salvar").addEventListener("click", async function() {
                 GrupoID: grupoLogado.GrupoID
             };
 
+            // Verifica se existe o aviso de vazio e remove ele antes de adicionar a nota
+            const avisoVazio = document.querySelector(".aviso-vazio");
+            if (avisoVazio) {
+                avisoVazio.remove();
+            }
+
             await fetch(SHEETDB_API.NOTAS, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -146,6 +155,7 @@ function mostrarNota(nota){
             box.remove(); // Remove a nota da tela
             allGroupNotes = allGroupNotes.filter(n => n.NotasID !== nota.NotasID);
             updateFiltroUsuarios();
+            verificarSeTemNotas();
 
         } catch (error) {
             console.error("Erro ao excluir a nota:", error);
@@ -165,6 +175,24 @@ function mostrarNota(nota){
     });
 
     document.getElementById("main").appendChild(box);
+}
+
+// Função auxiliar para mostrar mensagem se não houver notas
+function verificarSeTemNotas() {
+    const mainDiv = document.getElementById("main");
+    
+    if (allGroupNotes.length === 0) {
+        mainDiv.innerHTML = `
+            <div class="aviso-vazio">
+                <h3>Nenhuma nota encontrada...</h3>
+            </div>
+        `;
+    } else {
+        const aviso = mainDiv.querySelector(".aviso-vazio");
+        if (aviso) {
+            aviso.remove();
+        }
+    }
 }
 
 // Pesquisar notas criadas
@@ -304,3 +332,81 @@ deslogar.addEventListener("click", function(event){
     window.location.href = "index.html";
 
 });
+
+// Mudar senha
+
+const btnMudarSenha = document.getElementById("mudar_senha");
+
+if(btnMudarSenha){
+    btnMudarSenha.addEventListener("click", async function(event) {
+        event.preventDefault();
+
+        // Capturar os elementos
+        const inputSenhaAntiga = document.getElementById("senha_antiga");
+        const inputNovaSenha = document.getElementById("nova_senha");
+        const inputConfirmarSenha = document.getElementById("confirmar_nova_senha");
+
+        const senhaAntiga = inputSenhaAntiga.value;
+        const novaSenha = inputNovaSenha.value;
+        const confirmarSenha = inputConfirmarSenha.value;
+
+        // Validações Locais
+        if (!senhaAntiga || !novaSenha || !confirmarSenha) {
+            alert("Por favor, preencha todos os campos.");
+            return;
+        }
+
+        if (novaSenha !== confirmarSenha) {
+            alert("A nova senha e a confirmação não coincidem!");
+            return;
+        }
+
+        if (novaSenha.length < 6) { // Exemplo de regra de tamanho
+            alert("A senha deve ter pelo menos 6 caracteres.");
+            return;
+        }
+
+        // Verificar se a senha antiga está correta
+        // Comparar o que o usuário digitou com o que está salvo no localStorage 
+        if (senhaAntiga !== usuarioLogado.Senha) {
+            alert("A senha antiga está incorreta.");
+            return;
+        }
+
+        // Atualizar no SheetDB
+        try {
+            // Usa o endpoint do SheetDB para atualizar baseando-se na coluna UserID
+            // PATCH permite atualizar apenas um campo sem apagar o resto
+            const response = await fetch(`${SHEETDB_API.USERS}/UserID/${usuarioLogado.UserID}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    data: {
+                        Senha: novaSenha
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Erro na API: " + response.status);
+            }
+
+            // Atualizar o localStorage e a Interface
+            alert("Senha alterada com sucesso!");
+
+            usuarioLogado.Senha = novaSenha;
+            localStorage.setItem("usuarioLogado", JSON.stringify(usuarioLogado));
+
+            // Limpar os campos do formulário
+            inputSenhaAntiga.value = "";
+            inputNovaSenha.value = "";
+            inputConfirmarSenha.value = "";
+
+        } catch (error) {
+            console.error("Erro ao mudar a senha:", error);
+            alert("Ocorreu um erro ao salvar a nova senha. Tente novamente.");
+        }
+    });
+}
