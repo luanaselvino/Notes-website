@@ -1,2 +1,2 @@
-# Site de Notas
-Aplicação web com interface amigável que simula um workplace colaborativo. Permite que usuários autenticados adicionem e visualizem notas em tempo real, com cada entrada vinculada ao autor.
+# Notes website
+A web application with a user-friendly interface that simulates a collaborative workplace. It allows authenticated users to add and view notes in real-time, with each entry linked to its author.
